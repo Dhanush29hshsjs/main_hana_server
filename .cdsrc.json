@@ -1,0 +1,17 @@
+{
+    "auth":{
+        "passport":{
+            "strategy":"mock",
+            "users":{
+                "avan":{
+                    "password": "1234",
+                    "ID":"avan",
+                    "roles":[
+                        "authenticated-user"
+                    ]
+                }
+            }
+        }
+    }
+
+}

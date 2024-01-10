@@ -1,0 +1,65 @@
+_schema-version: '3.1'
+ID: MainHANAserver
+version: 1.0.0
+description: "A simple CAP project."
+parameters:
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - cds build --production
+modules:
+  - name: MainHANAserver-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      buildpack: nodejs_buildpack
+    build-parameters:
+      builder: npm
+    provides:
+      - name: srv-api # required by consumers of CAP services (e.g. approuter)
+        properties:
+          srv-url: ${default-url}
+    requires:
+      - name: MainHANAserver-auth
+      - name: MainHANAserver-db
+
+  - name: MainHANAserver-db-deployer
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    requires:
+      - name: MainHANAserver-db
+
+  - name: MainHANAserver
+    type: approuter.nodejs
+    path: app/
+    parameters:
+      keep-existing-routes: true
+      disk-quota: 256M
+      memory: 256M
+    requires:
+      - name: srv-api
+        group: destinations
+        properties:
+          name: srv-api # must be used in xs-app.json as well
+          url: ~{srv-url}
+          forwardAuthToken: true
+      - name: MainHANAserver-auth
+
+resources:
+  - name: MainHANAserver-auth
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: MainHANAserver
+        tenant-mode: dedicated
+  - name: MainHANAserver-db
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: mainhanaserver-db
